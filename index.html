@@ -8,6 +8,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 :root{
   --bg:#0b0d10; --panel:#14171c; --panel2:#1b1f26; --line:#262b34;
@@ -87,13 +88,19 @@ dialog h3{margin:0 0 8px}
 dialog p{color:var(--mute);margin:0 0 16px}
 .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:10;max-width:90vw}
 .toast.show{opacity:1}
+.map{height:340px;border-radius:14px;overflow:hidden;background:var(--panel2);margin-bottom:12px}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--mute);margin-bottom:12px}
+.legend i{display:inline-block;width:14px;height:4px;border-radius:2px;margin-right:4px;vertical-align:middle}
+.trip{cursor:pointer}
+.darktiles{filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9)}
+.tag{font-size:11px;padding:2px 6px;border-radius:6px;background:#2d2610;color:#ffe2a0;margin-left:6px}
 </style>
 </head>
 <body>
 
 <header>
   <h1>Trott'</h1>
-  <span id="conn" class="pill"><span class="dot"></span><span id="connTxt">Déconnectée</span></span>
+  <span id="conn" class="pill" style="cursor:pointer"><span class="dot"></span><span id="connTxt">Déconnectée</span></span>
 </header>
 
 <main class="wrap">
@@ -104,6 +111,7 @@ dialog p{color:var(--mute);margin:0 0 16px}
     <p>Allume la trottinette, active le Bluetooth et la localisation du téléphone, puis connecte-toi.</p>
     <button id="btnConnect" class="btn primary" style="width:100%">Se connecter</button>
     <button id="btnDemo" class="btn" style="width:100%;margin-top:8px">Mode démo (fausses données)</button>
+    <button id="btnTrips" class="btn" style="width:100%;margin-top:8px">Mes trajets</button>
     <p id="noBt" class="muted" style="display:none;margin-top:18px">Ce navigateur ne gère pas le Bluetooth web. Utilise <b>Chrome sur Android</b> (ou Chrome/Edge sur PC).</p>
   </section>
 
@@ -127,6 +135,18 @@ dialog p{color:var(--mute);margin:0 0 16px}
           <div class="l"><b>Puissance en mode bridé</b><small>Fais un essai à fond sur du plat. Plus de 25 km/h ? Baisse. Moins ? Monte.</small></div>
           <div class="step"><button id="bBrM">−</button><output id="vBrideP">30</output><button id="bBrP">+</button></div>
         </div>
+      </div>
+    </div>
+    <div class="card" id="recCard">
+      <button class="btn primary" id="bRec" style="width:100%;min-height:54px">● Enregistrer le trajet (GPS)</button>
+      <div id="recLive" style="display:none">
+        <div class="stats">
+          <div class="stat"><b id="rDist">0.00</b><span>Distance km</span></div>
+          <div class="stat"><b id="rAvg">0</b><span>Moyenne km/h</span></div>
+          <div class="stat"><b id="rMax">0</b><span>Max km/h</span></div>
+        </div>
+        <div class="muted" id="rInfo" style="margin:10px 0">GPS…</div>
+        <button class="btn danger" id="bRecStop" style="width:100%;min-height:50px">■ Arrêter et enregistrer</button>
       </div>
     </div>
     <div class="card">
@@ -185,9 +205,16 @@ dialog p{color:var(--mute);margin:0 0 16px}
 
   <!-- HISTORIQUE -->
   <section id="tabHist" class="tab">
-    <div class="card">
-      <h2>Trajets enregistrés</h2>
-      <div id="histList" class="muted">Aucun trajet pour l'instant.</div>
+    <div id="tripDetail" style="display:none"></div>
+    <div id="tripListWrap">
+      <div class="card">
+        <h2>Trajets GPS</h2>
+        <div id="tripList" class="muted">Chargement…</div>
+      </div>
+      <div class="card">
+        <h2>Sessions auto (sans GPS)</h2>
+        <div id="histList" class="muted">Aucune session pour l'instant.</div>
+      </div>
     </div>
   </section>
 
@@ -329,7 +356,7 @@ async function openGatt() {
   const tx = await svc.getCharacteristic(TX);
   tx.addEventListener('characteristicvaluechanged', ev => onFrame(new Uint8Array(ev.target.value.buffer)));
   await tx.startNotifications();
-  S.connected = true; reconnectTries = 0;
+  S.connected = true; S.offline = false; reconnectTries = 0;
   log('in', `Connectée à ${S.device.name} (écriture ${S.withResp ? 'avec' : 'sans'} réponse)`);
   if (S.device.name && S.device.name.toUpperCase().startsWith('LIVIAEK'))
     toast("Attention : ce module parle au contrôleur, pas à l'écran (non géré pour l'instant).");
@@ -400,7 +427,9 @@ function parse1D(m) {
   L.speed = be(m[5], m[6]) / 10;
   L.volt = be(m[7], m[8]) / 10;
   L.current = be(m[9], m[10]) / 10;
+  L._t = Date.now();
   rideTick();
+  recOnScooter();
 }
 function parse2D(m) {
   const L = S.live;
@@ -524,6 +553,7 @@ function render() {
   $('vWhkm').textContent = r && r.dist > 0.2 ? Math.round(r.wh / r.dist) : '–';
 
   renderBride();
+  renderRec();
   $('errBox').innerHTML = (L.errors || []).map(e => `<div class="alert">⚠ ${e}</div>`).join('');
 
   setSel($('tLight'), pv('light', L.light));
@@ -695,6 +725,170 @@ function quick(key, c, v) { S.pending[key] = v; cmd(c, v); render(); setTimeout(
 document.querySelectorAll('#gearBtns button').forEach(b => b.onclick = () => quick('gear', 0xA4, +b.dataset.g));
 document.querySelectorAll('#motorBtns button').forEach(b => b.onclick = () => quick('motor', 0xE9, +b.dataset.m));
 
+/* ---------------- Enregistrement GPS des trajets ----------------
+   Vitesse : compteur de la trott' si elle est connectée (plus précis), sinon GPS.
+   Les trajets sont stockés dans IndexedDB, sur le téléphone uniquement. */
+const DB = (() => {
+  let p;
+  const open = () => p || (p = new Promise((res, rej) => {
+    const r = indexedDB.open('trott', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('trips', { keyPath: 'id' });
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  }));
+  const tx = async (mode, fn) => { const db = await open(); return new Promise((res, rej) => { const t = db.transaction('trips', mode); const q = fn(t.objectStore('trips')); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); }); };
+  return { put: o => tx('readwrite', s => s.put(o)), del: id => tx('readwrite', s => s.delete(id)), all: () => tx('readonly', s => s.getAll()), get: id => tx('readonly', s => s.get(id)) };
+})();
+
+let REC = null;
+function haversine(a, b) {
+  const R = 6371000, r = Math.PI / 180, dLa = (b[0] - a[0]) * r, dLo = (b[1] - a[1]) * r;
+  const h = Math.sin(dLa / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLo / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+const scooterLive = () => (S.connected || S.demo) && S.live._t && Date.now() - S.live._t < 3000;
+function curSpeed() { return scooterLive() ? (S.live.speed || 0) : (REC && REC.gpsSpeed) || 0; }
+
+function recStart() {
+  if (!navigator.geolocation) return toast('GPS indisponible sur cet appareil');
+  REC = { id: Date.now(), start: Date.now(), pts: [], dist: 0, moving: 0, max: 0, maxGps: 0, wh: 0, acc: null, gpsSpeed: 0, last: null, demo: S.demo, tick: Date.now() };
+  REC.watch = navigator.geolocation.watchPosition(recPos, e => { if (REC) { REC.err = e.message; render(); } }, { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
+  REC.timer = setInterval(recTick, 1000);
+  keepAwake();
+  render();
+}
+function recPos(p) {
+  if (!REC) return;
+  const c = p.coords; REC.acc = Math.round(c.accuracy); REC.err = null;
+  if (c.accuracy > 35) return; // point trop imprécis
+  const pt = [+c.latitude.toFixed(6), +c.longitude.toFixed(6), Date.now(), 0];
+  if (c.speed != null && c.speed >= 0) { REC.gpsSpeed = c.speed * 3.6; if (c.accuracy < 20) REC.maxGps = Math.max(REC.maxGps, REC.gpsSpeed); }
+  pt[3] = Math.round(curSpeed() * 10) / 10;
+  const last = REC.last;
+  if (!last) { REC.pts.push(pt); REC.last = pt; return; }
+  const d = haversine(last, pt), dt = (pt[2] - last[2]) / 1000;
+  if (d < Math.max(4, c.accuracy / 3)) return;            // immobile / bruit GPS
+  if (dt > 0 && d / dt > 40) return;                         // saut aberrant (> 144 km/h)
+  if (c.speed == null && dt > 0) REC.gpsSpeed = d / dt * 3.6;
+  REC.dist += d; REC.pts.push(pt); REC.last = pt;
+}
+function recTick() {
+  if (!REC) return;
+  const now = Date.now(), dt = (now - REC.tick) / 1000; REC.tick = now;
+  const sp = curSpeed();
+  if (sp > 2) REC.moving += dt;
+  if (!scooterLive() && REC.last && now - REC.last[2] > 8000) REC.gpsSpeed = 0;
+  scheduleRender();
+}
+function recOnScooter() {
+  if (!REC) return;
+  const L = S.live;
+  REC.max = Math.max(REC.max, L.speed || 0);
+  const now = Date.now(), dt = REC._st ? (now - REC._st) / 1000 : 0; REC._st = now;
+  if (dt > 0 && dt < 5) REC.wh += (L.volt || 0) * (L.current || 0) * dt / 3600;
+}
+async function recStop() {
+  if (!REC) return;
+  if (!await ask('Arrêter l\'enregistrement ?', 'Le trajet sera sauvegardé sur ton téléphone.')) return;
+  navigator.geolocation.clearWatch(REC.watch); clearInterval(REC.timer);
+  const r = REC; REC = null; render();
+  if (r.pts.length < 2 || r.dist < 50) return toast('Trajet trop court, pas enregistré');
+  const trip = { id: r.id, start: r.start, end: Date.now(), dist: Math.round(r.dist), moving: Math.round(r.moving),
+    max: +(Math.max(r.max, r.max ? 0 : r.maxGps)).toFixed(1), maxGps: +r.maxGps.toFixed(1), wh: Math.round(r.wh), demo: r.demo, pts: r.pts };
+  await DB.put(trip);
+  showTab('tabHist'); openTrip(trip.id);
+}
+const avgOf = (dist, moving) => moving > 0 ? dist / moving * 3.6 : 0;
+function renderRec() {
+  const on = !!REC;
+  $('bRec').style.display = on ? 'none' : ''; $('recLive').style.display = on ? '' : 'none';
+  if (!on) return;
+  $('rDist').textContent = (REC.dist / 1000).toFixed(2);
+  $('rAvg').textContent = Math.round(avgOf(REC.dist, REC.moving));
+  $('rMax').textContent = Math.round(Math.max(REC.max, REC.max ? 0 : REC.maxGps));
+  $('rInfo').innerHTML = REC.err ? `<span style="color:var(--bad)">GPS : ${REC.err}. Autorise la localisation pour Chrome.</span>`
+    : `● REC ${fmtDur((Date.now() - REC.start) / 1000)} · en mouvement ${fmtDur(REC.moving)} · GPS ${REC.acc == null ? 'en recherche…' : '± ' + REC.acc + ' m'} · vitesse : ${scooterLive() ? 'compteur trott\'' : 'GPS'}. Garde l'app ouverte (écran allumé).`;
+}
+$('bRec').onclick = recStart;
+$('bRecStop').onclick = recStop;
+
+/* Liste et détail */
+const fmtDate = d => new Date(d).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+async function renderTrips() {
+  let list = [];
+  try { list = (await DB.all()).sort((a, b) => b.start - a.start); } catch (e) { $('tripList').textContent = 'Stockage indisponible : ' + e.message; return; }
+  if (!list.length) { $('tripList').innerHTML = 'Aucun trajet GPS. Appuie sur « Enregistrer le trajet » dans le tableau de bord.'; return; }
+  const km = list.filter(t => !t.demo).reduce((a, t) => a + t.dist, 0) / 1000;
+  $('tripList').innerHTML = `<div class="stats" style="margin-bottom:12px"><div class="stat"><b>${list.length}</b><span>Trajets</span></div><div class="stat"><b>${km.toFixed(1)}</b><span>km au total</span></div><div class="stat"><b>${Math.round(Math.max(0, ...list.filter(t => !t.demo).map(t => t.max)))}</b><span>Record km/h</span></div></div>` +
+    list.map(t => `<div class="row trip" data-id="${t.id}"><div class="l"><b>${fmtDate(t.start)}${t.demo ? '<span class="tag">démo</span>' : ''}</b><small>${fmtDur(t.moving)} · moy. ${Math.round(avgOf(t.dist, t.moving))} km/h · max ${Math.round(t.max)} km/h</small></div><b>${(t.dist / 1000).toFixed(1)} km</b></div>`).join('');
+  $('tripList').querySelectorAll('.trip').forEach(el => el.onclick = () => openTrip(+el.dataset.id));
+}
+
+let leafletP = null;
+function loadLeaflet() {
+  return leafletP || (leafletP = new Promise((res, rej) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js';
+    sc.onload = () => res(window.L); sc.onerror = () => { leafletP = null; rej(new Error('carte indisponible hors ligne')); };
+    document.head.appendChild(sc);
+  }));
+}
+const spColor = v => v < 10 ? '#4da3ff' : v < 20 ? '#3dd68c' : v < 25 ? '#c6e84a' : v < 35 ? '#ffb020' : '#ff4d5e';
+
+async function openTrip(id) {
+  const t = await DB.get(id); if (!t) return;
+  $('tripListWrap').style.display = 'none';
+  const el = $('tripDetail'); el.style.display = '';
+  const avg = avgOf(t.dist, t.moving), wkm = t.dist > 200 && t.wh ? Math.round(t.wh / (t.dist / 1000)) : null;
+  el.innerHTML = `
+    <button class="btn" id="bTripBack" style="margin-bottom:12px">← Trajets</button>
+    ${t.demo ? '<div class="alert info">Trajet enregistré en mode démo : la vitesse vient des fausses données.</div>' : ''}
+    <div class="card">
+      <h2>${fmtDate(t.start)}</h2>
+      <div class="map" id="tripMap"></div>
+      <div class="legend"><span><i style="background:#4da3ff"></i>&lt;10</span><span><i style="background:#3dd68c"></i>10–20</span><span><i style="background:#c6e84a"></i>20–25</span><span><i style="background:#ffb020"></i>25–35</span><span><i style="background:#ff4d5e"></i>&gt;35 km/h</span></div>
+      <div class="stats">
+        <div class="stat"><b>${(t.dist / 1000).toFixed(2)}</b><span>Distance km</span></div>
+        <div class="stat"><b>${avg.toFixed(1)}</b><span>Moyenne km/h</span></div>
+        <div class="stat"><b>${t.max.toFixed(1)}</b><span>Max km/h</span></div>
+        <div class="stat"><b>${fmtDur(t.moving)}</b><span>En mouvement</span></div>
+        <div class="stat"><b>${fmtDur((t.end - t.start) / 1000)}</b><span>Durée totale</span></div>
+        <div class="stat"><b>${t.maxGps ? t.maxGps.toFixed(1) : '–'}</b><span>Max GPS km/h</span></div>
+        <div class="stat"><b>${t.wh || '–'}</b><span>Conso Wh</span></div>
+        <div class="stat"><b>${wkm ?? '–'}</b><span>Wh/km</span></div>
+        <div class="stat"><b>${t.pts.length}</b><span>Points GPS</span></div>
+      </div>
+      <div class="grid g2" style="margin-top:12px">
+        <button class="btn" id="bGpx">Exporter (GPX)</button>
+        <button class="btn danger" id="bTripDel">Supprimer</button>
+      </div>
+    </div>`;
+  $('bTripBack').onclick = closeTrip;
+  $('bGpx').onclick = () => exportGpx(t);
+  $('bTripDel').onclick = async () => { if (await ask('Supprimer ce trajet ?', 'Il sera effacé de ton téléphone.')) { await DB.del(t.id); closeTrip(); } };
+  window.scrollTo(0, 0);
+  try {
+    const L = await loadLeaflet();
+    const map = L.map('tripMap', { zoomControl: false, attributionControl: true });
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, className: 'darktiles', attribution: '© OpenStreetMap' }).addTo(map);
+    for (let i = 1; i < t.pts.length; i++) {
+      const a = t.pts[i - 1], b = t.pts[i];
+      L.polyline([[a[0], a[1]], [b[0], b[1]]], { color: spColor(b[3]), weight: 5, opacity: .95 }).addTo(map);
+    }
+    const f = t.pts[0], l = t.pts[t.pts.length - 1];
+    L.circleMarker([f[0], f[1]], { radius: 7, color: '#fff', fillColor: '#3dd68c', fillOpacity: 1, weight: 2 }).addTo(map);
+    L.circleMarker([l[0], l[1]], { radius: 7, color: '#fff', fillColor: '#ff4d5e', fillOpacity: 1, weight: 2 }).addTo(map);
+    map.fitBounds(t.pts.map(p => [p[0], p[1]]), { padding: [24, 24] });
+  } catch (e) { $('tripMap').innerHTML = `<div class="muted" style="padding:20px">Carte : ${e.message}</div>`; }
+}
+function closeTrip() { $('tripDetail').style.display = 'none'; $('tripDetail').innerHTML = ''; $('tripListWrap').style.display = ''; renderTrips(); }
+function exportGpx(t) {
+  const pts = t.pts.map(p => `<trkpt lat="${p[0]}" lon="${p[1]}"><time>${new Date(p[2]).toISOString()}</time></trkpt>`).join('');
+  const gpx = `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Trott'" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>Trajet ${fmtDate(t.start)}</name><trkseg>${pts}</trkseg></trk></gpx>`;
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([gpx], { type: 'application/gpx+xml' }));
+  a.download = `trajet-${new Date(t.start).toISOString().slice(0, 16).replace(/[:T]/g, '-')}.gpx`; a.click();
+}
+$('btnTrips').onclick = () => { S.offline = true; showApp(); showTab('tabHist'); };
+
 /* ---------------- Bridé 25 / Débridé ----------------
    L'écran n'a pas de commande Bluetooth « limite 25 km/h ». Le mode bridé combine
    donc la vitesse 1 et la limite de puissance P15 (à étalonner sur le terrain).
@@ -765,14 +959,14 @@ document.querySelectorAll('nav button').forEach(b => b.onclick = () => showTab(b
 function showTab(id) {
   document.querySelectorAll('nav button').forEach(x => x.classList.toggle('sel', x.dataset.t === id));
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('sel', t.id === id));
-  if (id === 'tabHist') renderHist();
+  if (id === 'tabHist') { renderHist(); if ($('tripDetail').style.display === 'none') renderTrips(); }
   if (id === 'tabDiag') renderDiag();
   window.scrollTo(0, 0);
 }
 function showApp() {
   $('screenConnect').style.display = 'none'; $('nav').style.display = '';
   $('demoBanner').style.display = S.demo ? '' : 'none';
-  setConn(S.demo ? 'Démo' : 'Connectée');
+  setConn(S.demo ? 'Démo' : S.connected ? 'Connectée' : 'Se connecter');
   if (!document.querySelector('.tab.sel')) showTab('tabDash');
   render();
 }
@@ -812,14 +1006,15 @@ function stopDemo() { clearInterval(demoTimer); demoTimer = null; }
 /* ---------------- Démarrage ---------------- */
 buildSettings();
 $('btnConnect').onclick = connect;
+$('conn').onclick = () => { if (!S.connected && !S.demo && navigator.bluetooth) connect(); };
 $('btnDemo').onclick = startDemo;
 if (!navigator.bluetooth) $('noBt').style.display = 'block';
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 // garde l'écran allumé pendant la conduite
 let wakeLock = null;
-async function keepAwake() { try { if (S.connected || S.demo) wakeLock = await navigator.wakeLock?.request('screen'); wakeLock?.addEventListener('release', () => { wakeLock = null; }); } catch (e) {} }
+async function keepAwake() { try { if (S.connected || S.demo || REC) wakeLock = await navigator.wakeLock?.request('screen'); wakeLock?.addEventListener('release', () => { wakeLock = null; }); } catch (e) {} }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') keepAwake(); });
-setInterval(() => { if ((S.connected || S.demo) && !wakeLock) keepAwake(); }, 5000);
+setInterval(() => { if ((S.connected || S.demo || REC) && !wakeLock) keepAwake(); }, 5000);
 </script>
 </body>
 </html>
