@@ -116,6 +116,19 @@ dialog p{color:var(--mute);margin:0 0 16px}
       <div class="unit" id="vUnit">km/h</div>
       <span class="mode ECO" id="vMode">ECO</span>
     </div>
+    <div class="card" id="brideCard">
+      <div class="grid g2">
+        <button class="btn" id="bBride" style="min-height:58px">🛡 Bridé 25</button>
+        <button class="btn" id="bDebride" style="min-height:58px">🔓 Débridé</button>
+      </div>
+      <div class="muted" id="brideInfo" style="margin-top:10px"></div>
+      <div id="brideAdj" style="display:none;margin-top:10px">
+        <div class="row" style="padding-top:0;border:0">
+          <div class="l"><b>Puissance en mode bridé</b><small>Fais un essai à fond sur du plat. Plus de 25 km/h ? Baisse. Moins ? Monte.</small></div>
+          <div class="step"><button id="bBrM">−</button><output id="vBrideP">30</output><button id="bBrP">+</button></div>
+        </div>
+      </div>
+    </div>
     <div class="card">
       <h2>Batterie</h2>
       <div class="batt">
@@ -510,6 +523,7 @@ function render() {
   $('vWh').textContent = r ? Math.round(r.wh) : 0;
   $('vWhkm').textContent = r && r.dist > 0.2 ? Math.round(r.wh / r.dist) : '–';
 
+  renderBride();
   $('errBox').innerHTML = (L.errors || []).map(e => `<div class="alert">⚠ ${e}</div>`).join('');
 
   setSel($('tLight'), pv('light', L.light));
@@ -680,6 +694,57 @@ $('tPower').onclick = async () => {
 function quick(key, c, v) { S.pending[key] = v; cmd(c, v); render(); setTimeout(() => { if (S.pending[key] === v) { delete S.pending[key]; render(); } }, 8000); }
 document.querySelectorAll('#gearBtns button').forEach(b => b.onclick = () => quick('gear', 0xA4, +b.dataset.g));
 document.querySelectorAll('#motorBtns button').forEach(b => b.onclick = () => quick('motor', 0xE9, +b.dataset.m));
+
+/* ---------------- Bridé 25 / Débridé ----------------
+   L'écran n'a pas de commande Bluetooth « limite 25 km/h ». Le mode bridé combine
+   donc la vitesse 1 et la limite de puissance P15 (à étalonner sur le terrain).
+   Le mode débridé remet les valeurs d'avant le bridage. */
+const lsGet = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+const BR = lsGet('trott-bride', { p15: 30 });
+let brideMax = 0, overSince = 0;
+function isBride() { return pv('gear', S.set.gear) === 0 && +pv('p15', S.set.p15) === BR.p15; }
+function bride() {
+  if (!isBride()) lsSet('trott-debride', { gear: S.set.gear ?? 2, p15: S.set.p15 ?? 100 });
+  brideMax = 0;
+  quick('gear', 0xA4, 0);
+  quick('p15', 0xA9, BR.p15);
+  toast('Mode bridé envoyé');
+}
+async function debride() {
+  if (!isBride()) return toast('Déjà débridé');
+  if (!stopped()) return toast('Arrête-toi avant de débrider');
+  if (!await ask('Débrider ?', 'Au-delà de 25 km/h, la trottinette n\'est plus autorisée sur la voie publique en France et ton assurance peut ne plus te couvrir. À réserver aux terrains privés.')) return;
+  const prev = lsGet('trott-debride', { gear: 2, p15: 100 });
+  const p15 = prev.p15 === BR.p15 ? 100 : prev.p15, gear = prev.gear === 0 ? 2 : prev.gear;
+  quick('gear', 0xA4, gear);
+  quick('p15', 0xA9, p15);
+  toast('Mode débridé envoyé');
+}
+function adjBride(d) {
+  BR.p15 = Math.max(5, Math.min(100, BR.p15 + d)); lsSet('trott-bride', BR);
+  if (S.set.gear === 0 || pv('gear', S.set.gear) === 0) { quick('p15', 0xA9, BR.p15); brideMax = 0; }
+  render();
+}
+function renderBride() {
+  const on = S.set.p15 != null && isBride(), sp = S.live.speed || 0;
+  setSel($('bBride'), on); setSel($('bDebride'), S.set.p15 != null && !on);
+  $('brideAdj').style.display = on ? '' : 'none';
+  $('vBrideP').textContent = BR.p15;
+  if (on) brideMax = Math.max(brideMax, sp);
+  const over = on && sp > 25.5;
+  overSince = over ? (overSince || Date.now()) : 0;
+  const alarm = overSince && Date.now() - overSince > 1500;
+  $('brideInfo').innerHTML = S.set.p15 == null ? 'En attente des réglages de la trott\'…'
+    : on ? (alarm ? `<span style="color:var(--bad)">⚠ ${Math.round(sp)} km/h en mode bridé : baisse la puissance ci-dessous.</span>` : `Bridé : vitesse 1, puissance ${BR.p15} %. Vitesse max vue : ${Math.round(brideMax)} km/h.`)
+    : `Débridé : vitesse ${['1', '2', '3', 'P'][pv('gear', S.set.gear)] ?? '?'}, puissance ${pv('p15', S.set.p15)} %.`;
+  if (alarm && !renderBride._buzz) { navigator.vibrate?.([200, 100, 200]); renderBride._buzz = true; }
+  if (!alarm) renderBride._buzz = false;
+}
+$('bBride').onclick = bride;
+$('bDebride').onclick = debride;
+$('bBrM').onclick = () => adjBride(-2);
+$('bBrP').onclick = () => adjBride(+2);
 
 $('bOdoReset').onclick = async () => { if (await ask('Remettre le compteur total à zéro ?', 'Le kilométrage total sera perdu définitivement.', 'ZERO')) cmd(0xE4, 0x58); };
 $('bFactory').onclick = async () => { if (await ask('Réglages d\'usine ?', 'Tous les réglages de l\'écran (P01–P99) reviennent aux valeurs d\'usine. Irréversible.', 'USINE')) cmd(0xE3, 0xA7); };
