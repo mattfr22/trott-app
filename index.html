@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0d10">
+<title>Trott'</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#0b0d10; --panel:#14171c; --panel2:#1b1f26; --line:#262b34;
+  --text:#eef1f5; --mute:#8a93a3; --dim:#5b6372;
+  --accent:#3dd68c; --accent2:#2bb673; --warn:#ffb020; --bad:#ff4d5e; --blue:#4da3ff;
+  --r:18px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{min-height:100dvh;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+button{font:inherit;color:inherit}
+.wrap{max-width:560px;margin:0 auto;padding:12px 16px}
+header{display:flex;align-items:center;gap:10px;padding:10px 16px;max-width:560px;margin:0 auto}
+header h1{font-size:18px;margin:0;font-weight:700;letter-spacing:.2px;flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:99px;background:var(--panel2);border:1px solid var(--line);font-size:13px;color:var(--mute)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--dim)}
+.on .dot{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.demo .dot{background:var(--warn)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:12px}
+.card h2{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--mute);margin:0 0 12px;font-weight:600}
+.btn{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:12px 14px;cursor:pointer;transition:.15s;min-height:46px}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--accent);color:#06210f;border-color:transparent;font-weight:700}
+.btn.danger{border-color:#5a2028;color:var(--bad)}
+.btn.sel{background:#173326;border-color:var(--accent);color:var(--accent);font-weight:700}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.grid{display:grid;gap:8px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.g6{grid-template-columns:repeat(6,1fr)}
+.hero{text-align:center;padding:22px 16px 18px}
+.speed{font-size:96px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-3px}
+.unit{color:var(--mute);font-size:14px;margin-top:2px}
+.mode{display:inline-block;margin-top:10px;padding:4px 12px;border-radius:99px;font-size:12px;font-weight:700;letter-spacing:1px}
+.mode.ECO{background:#12302a;color:var(--accent)}.mode.NORMAL{background:#142638;color:var(--blue)}.mode.SPORT{background:#3a1a1e;color:var(--bad)}
+.batt{display:flex;align-items:center;gap:14px}
+.battbar{flex:1;height:14px;border-radius:99px;background:var(--panel2);overflow:hidden;border:1px solid var(--line)}
+.battbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:width .6s}
+.battpct{font-size:30px;font-weight:800;min-width:84px;text-align:right;font-variant-numeric:tabular-nums}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--panel2);border-radius:14px;padding:10px 12px}
+.stat b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--mute)}
+.tog{display:flex;align-items:center;justify-content:center;gap:6px;flex-direction:column;font-size:12px;min-height:74px;padding:8px 2px;min-width:0}
+.tog svg{width:24px;height:24px}
+.alert{background:#3a1a1e;border:1px solid #5a2028;color:#ffc2c8;border-radius:14px;padding:10px 14px;margin-bottom:12px;font-size:14px}
+.alert.info{background:#2d2610;border-color:#5a4a12;color:#ffe2a0}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0;padding-top:0}
+.row .l{flex:1;min-width:0}
+.row .l b{display:block;font-weight:600}
+.row .l small{color:var(--mute);font-size:12px}
+.row .cur{color:var(--mute);font-size:12px}
+.seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:3px;gap:3px;flex-wrap:wrap}
+.seg button{border:0;background:none;padding:8px 10px;border-radius:9px;font-size:13px;cursor:pointer;color:var(--mute)}
+.seg button.sel{background:var(--accent);color:#06210f;font-weight:700}
+.step{display:flex;align-items:center;gap:6px}
+.step button{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);font-size:20px;cursor:pointer}
+.step output{min-width:44px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums}
+.pending{color:var(--warn)!important}
+nav{position:fixed;left:0;right:0;bottom:0;background:rgba(11,13,16,.94);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom);z-index:5}
+nav .in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+nav button{background:none;border:0;padding:10px 0 12px;color:var(--dim);font-size:11px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer}
+nav button svg{width:22px;height:22px}
+nav button.sel{color:var(--accent)}
+.tab{display:none}.tab.sel{display:block}
+.log{font:12px/1.5 ui-monospace,Consolas,monospace;background:#07090b;border-radius:12px;padding:10px;max-height:300px;overflow:auto;white-space:pre-wrap;word-break:break-all;color:#9fb0c0}
+.log .tx{color:var(--blue)}.log .rx{color:#9fb0c0}.log .er{color:var(--bad)}
+input[type=text],input[type=number]{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:11px 12px;font:inherit;width:100%}
+.connect{text-align:center;padding:40px 16px}
+.connect p{color:var(--mute);margin:10px 0 22px}
+.muted{color:var(--mute);font-size:13px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px}
+.kv span:nth-child(odd){color:var(--mute)}
+.kv span:nth-child(even){font-family:ui-monospace,Consolas,monospace;word-break:break-all}
+dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:20px;max-width:420px;width:calc(100% - 32px);padding:20px}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+dialog h3{margin:0 0 8px}
+dialog p{color:var(--mute);margin:0 0 16px}
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--panel2);border:1px solid var(--line);padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:.25s;pointer-events:none;z-index:10;max-width:90vw}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Trott'</h1>
+  <span id="conn" class="pill"><span class="dot"></span><span id="connTxt">Déconnectée</span></span>
+</header>
+
+<main class="wrap">
+  <!-- ÉCRAN DE CONNEXION -->
+  <section id="screenConnect" class="card connect">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="17.5" r="2.5"/><circle cx="18.5" cy="17.5" r="2.5"/><path d="M8 17.5h8l-3-11h3M13 6.5l-1-2"/></svg>
+    <h2 style="font-size:20px;text-transform:none;letter-spacing:0;color:var(--text);margin:14px 0 0">Boyueda S5-11</h2>
+    <p>Allume la trottinette, active le Bluetooth et la localisation du téléphone, puis connecte-toi.</p>
+    <button id="btnConnect" class="btn primary" style="width:100%">Se connecter</button>
+    <button id="btnDemo" class="btn" style="width:100%;margin-top:8px">Mode démo (fausses données)</button>
+    <p id="noBt" class="muted" style="display:none;margin-top:18px">Ce navigateur ne gère pas le Bluetooth web. Utilise <b>Chrome sur Android</b> (ou Chrome/Edge sur PC).</p>
+  </section>
+
+  <!-- TABLEAU DE BORD -->
+  <section id="tabDash" class="tab">
+    <div id="demoBanner" class="alert info" style="display:none">Mode démo : ces données sont fausses.</div>
+    <div id="errBox"></div>
+    <div class="card hero">
+      <div class="speed" id="vSpeed">0</div>
+      <div class="unit" id="vUnit">km/h</div>
+      <span class="mode ECO" id="vMode">ECO</span>
+    </div>
+    <div class="card">
+      <h2>Batterie</h2>
+      <div class="batt">
+        <div class="battbar"><i id="vBattBar"></i></div>
+        <div class="battpct" id="vBatt">–</div>
+      </div>
+      <div class="muted" style="margin-top:8px" id="vBattSub">–</div>
+    </div>
+    <div class="card">
+      <div class="stats">
+        <div class="stat"><b id="vPower">0</b><span>Puissance W</span></div>
+        <div class="stat"><b id="vCurrent">0</b><span>Courant A</span></div>
+        <div class="stat"><b id="vVolt">0</b><span>Tension V</span></div>
+        <div class="stat"><b id="vTrip">0</b><span>Trajet km</span></div>
+        <div class="stat"><b id="vOdo">0</b><span>Total km</span></div>
+        <div class="stat"><b id="vMax">0</b><span>Vmax trajet</span></div>
+        <div class="stat"><b id="vTime">0:00</b><span>Durée</span></div>
+        <div class="stat"><b id="vWh">0</b><span>Conso Wh</span></div>
+        <div class="stat"><b id="vWhkm">–</b><span>Wh/km</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Commandes</h2>
+      <div class="grid g4">
+        <button class="btn tog" id="tLight"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></svg>Phare</button>
+        <button class="btn tog" id="tCruise"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 13l4-4M12 5V3"/></svg>Régulateur</button>
+        <button class="btn tog" id="tLock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span id="tLockTxt">Verrouiller</span></button>
+        <button class="btn tog" id="tPower"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v9M6.3 6.3a8 8 0 1 0 11.4 0"/></svg>Éteindre</button>
+      </div>
+      <h2 style="margin-top:16px">Vitesse</h2>
+      <div class="grid g4" id="gearBtns">
+        <button class="btn" data-g="0">1</button><button class="btn" data-g="1">2</button><button class="btn" data-g="2">3</button><button class="btn" data-g="3">P</button>
+      </div>
+      <h2 style="margin-top:16px">Moteurs</h2>
+      <div class="grid g3" id="motorBtns">
+        <button class="btn" data-m="0">Arrière</button><button class="btn" data-m="1">Avant</button><button class="btn" data-m="2">Les deux</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- RÉGLAGES -->
+  <section id="tabSet" class="tab">
+    <div class="alert info" id="setHint">Les valeurs actuelles s'affichent quand la trott' les envoie (quelques secondes après la connexion). En orange : en attente de confirmation.</div>
+    <div class="card" id="setRide"><h2>Conduite</h2></div>
+    <div class="card" id="setComfort"><h2>Affichage &amp; confort</h2></div>
+    <div class="card" id="setSecurity"><h2>Démarrage &amp; sécurité</h2></div>
+    <div class="card" id="setTech"><h2>Technique (avancé)</h2></div>
+    <div class="card">
+      <h2>Zone dangereuse</h2>
+      <div class="row"><div class="l"><b>Remise à zéro du compteur total</b><small>Irréversible.</small></div><button class="btn danger" id="bOdoReset">Remettre à 0</button></div>
+      <div class="row"><div class="l"><b>Réglages d'usine de l'écran</b><small>Efface tous les réglages P01–P99. Irréversible.</small></div><button class="btn danger" id="bFactory">Réinitialiser</button></div>
+    </div>
+  </section>
+
+  <!-- HISTORIQUE -->
+  <section id="tabHist" class="tab">
+    <div class="card">
+      <h2>Trajets enregistrés</h2>
+      <div id="histList" class="muted">Aucun trajet pour l'instant.</div>
+    </div>
+  </section>
+
+  <!-- DIAGNOSTIC -->
+  <section id="tabDiag" class="tab">
+    <div class="card">
+      <h2>Appareil</h2>
+      <div class="kv" id="devInfo"><span>Nom</span><span>–</span></div>
+    </div>
+    <div class="card">
+      <h2>Dernières trames reçues</h2>
+      <div class="kv" id="lastFrames"></div>
+    </div>
+    <div class="card">
+      <h2>Journal Bluetooth</h2>
+      <div class="log" id="log"></div>
+      <div class="grid g2" style="margin-top:10px">
+        <button class="btn" id="bCopyLog">Copier le journal</button>
+        <button class="btn" id="bClearLog">Effacer</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Commande manuelle</h2>
+      <p class="muted" style="margin-top:0">Commande écran : CMD et valeur en hexa, la somme de contrôle est calculée toute seule. Ex. <code>A3 01</code> = phare allumé.</p>
+      <div class="grid g2"><input type="text" id="rawCmd" placeholder="CMD (ex. A3)"><input type="text" id="rawVal" placeholder="Valeur (ex. 01 ou 1234)"></div>
+      <button class="btn" id="bRaw" style="width:100%;margin-top:8px">Envoyer</button>
+      <button class="btn" id="bHandshake" style="width:100%;margin-top:8px">Renvoyer la poignée de main (A0)</button>
+      <button class="btn danger" id="bDisconnect" style="width:100%;margin-top:8px">Se déconnecter</button>
+    </div>
+  </section>
+</main>
+
+<nav id="nav" style="display:none"><div class="in">
+  <button data-t="tabDash" class="sel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 15a8 8 0 1 1 16 0"/><path d="M12 15l4-5"/></svg>Tableau</button>
+  <button data-t="tabSet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Réglages</button>
+  <button data-t="tabHist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>Trajets</button>
+  <button data-t="tabDiag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Diagnostic</button>
+</div></nav>
+
+<dialog id="dlg"><h3 id="dlgT"></h3><p id="dlgP"></p><div id="dlgExtra"></div>
+  <div class="grid g2" style="margin-top:14px"><button class="btn" id="dlgNo">Annuler</button><button class="btn primary" id="dlgYes">Confirmer</button></div>
+</dialog>
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+/* =====================================================================
+   Protocole écran LY 810 (Boyueda S5-11), retrouvé dans l'app My-Trip.
+   Service Nordic UART. Écriture : D7 07 CMD 00 P1 P2 CHK
+   CHK = (07+CMD+00+P1+P2) & 0xFF. Notifications : trames D5 de 18 octets.
+   ===================================================================== */
+const SVC = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+const RX  = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // on écrit ici
+const TX  = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // notifications
+
+const $ = id => document.getElementById(id);
+const hex = b => [...b].map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
+
+function frame(cmd, p1, p2) {
+  const f = [0xD7, 0x07, cmd & 255, 0x00, p1 & 255, p2 & 255, 0];
+  f[6] = (f[1] + f[2] + f[3] + f[4] + f[5]) & 255;
+  return new Uint8Array(f);
+}
+
+/* ---------------- État ---------------- */
+const S = {
+  live: {}, set: {}, pending: {},     // pending[key] = valeur envoyée, pas encore confirmée
+  connected: false, demo: false,
+  device: null, rx: null, withResp: true,
+  last: {},                           // dernière trame brute par type
+  ride: null,
+};
+const RATED = [24, 36, 48, 60, 72, 52];
+const CELLS = { 24: 7, 36: 10, 48: 13, 52: 14, 60: 16, 72: 20 };
+
+/* ---------------- Journal ---------------- */
+const logLines = [];
+function log(kind, msg) {
+  const t = new Date().toTimeString().slice(0, 8);
+  logLines.push({ kind, txt: `${t} ${kind === 'tx' ? '→' : kind === 'rx' ? '←' : '!'} ${msg}` });
+  if (logLines.length > 400) logLines.shift();
+  if ($('tabDiag').classList.contains('sel')) renderLog();
+}
+function renderLog() {
+  const el = $('log');
+  el.innerHTML = logLines.slice(-150).map(l => `<div class="${l.kind}">${l.txt.replace(/</g, '&lt;')}</div>`).join('');
+  el.scrollTop = el.scrollHeight;
+}
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+/* ---------------- Bluetooth ---------------- */
+let writeQueue = Promise.resolve();
+function send(bytes) {
+  log('tx', hex(bytes));
+  if (S.demo) { demoApply(bytes); return Promise.resolve(); }
+  if (!S.rx) { toast('Pas connectée'); return Promise.resolve(); }
+  writeQueue = writeQueue.then(async () => {
+    try {
+      if (S.withResp) await S.rx.writeValueWithResponse(bytes);
+      else await S.rx.writeValueWithoutResponse(bytes);
+    } catch (e) {
+      log('er', 'Écriture : ' + e.message);
+      if (S.withResp && S.rx.properties.writeWithoutResponse) {
+        S.withResp = false;
+        try { await S.rx.writeValueWithoutResponse(bytes); } catch (e2) { log('er', e2.message); }
+      }
+    }
+    await new Promise(r => setTimeout(r, 60));
+  });
+  return writeQueue;
+}
+const cmd = (c, v = 0, p1 = 0) => send(frame(c, p1, v));
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+async function connect() {
+  if (!navigator.bluetooth) { $('noBt').style.display = 'block'; return; }
+  try {
+    const device = await navigator.bluetooth.requestDevice({
+      filters: [{ namePrefix: 'LIVIAE' }, { namePrefix: 'liviae' }, { namePrefix: 'Liviae' }],
+      optionalServices: [SVC],
+    });
+    S.device = device;
+    device.addEventListener('gattserverdisconnected', onDisconnect);
+    await openGatt();
+  } catch (e) {
+    if (e.name !== 'NotFoundError') { toast('Connexion impossible : ' + e.message); log('er', e.message); }
+  }
+}
+
+async function openGatt() {
+  setConn('Connexion…');
+  const server = await S.device.gatt.connect();
+  const svc = await server.getPrimaryService(SVC);
+  S.rx = await svc.getCharacteristic(RX);
+  S.withResp = !!S.rx.properties.write;
+  const tx = await svc.getCharacteristic(TX);
+  tx.addEventListener('characteristicvaluechanged', ev => onFrame(new Uint8Array(ev.target.value.buffer)));
+  await tx.startNotifications();
+  S.connected = true; reconnectTries = 0;
+  log('in', `Connectée à ${S.device.name} (écriture ${S.withResp ? 'avec' : 'sans'} réponse)`);
+  if (S.device.name && S.device.name.toUpperCase().startsWith('LIVIAEK'))
+    toast("Attention : ce module parle au contrôleur, pas à l'écran (non géré pour l'instant).");
+  showApp();
+  await wait(1000);
+  await handshake();
+}
+
+async function handshake() {
+  // « points de connexion » envoyés par l'app officielle
+  await cmd(0xA0, 0x01); await wait(300); await cmd(0xA0, 0x02);
+}
+
+let reconnectTries = 0;
+async function onDisconnect() {
+  S.connected = false; S.rx = null;
+  setConn('Reconnexion…');
+  log('er', 'Déconnectée');
+  endRide();
+  while (S.device && reconnectTries < 20) {
+    reconnectTries++;
+    await wait(Math.min(1000 * reconnectTries, 5000));
+    if (!S.device) return;
+    try { await openGatt(); return; } catch (e) { log('er', 'Échec reconnexion : ' + e.message); }
+  }
+  setConn('Déconnectée');
+}
+
+function disconnect() {
+  const d = S.device; S.device = null;
+  if (d && d.gatt.connected) d.gatt.disconnect();
+  stopDemo();
+  S.connected = false; S.demo = false;
+  endRide();
+  $('screenConnect').style.display = ''; $('nav').style.display = 'none';
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('sel'));
+  setConn('Déconnectée');
+}
+
+/* ---------------- Décodage ---------------- */
+const be = (a, b) => a * 256 + b;
+const bit = (v, n) => (v >> n) & 1;
+
+function onFrame(v) {
+  if (v[0] === 0xD5 && v.length === 18) {
+    const type = v[2];
+    S.last[type.toString(16)] = hex(v);
+    if (type !== 0x1D || !onFrame._q) { log('rx', hex(v)); }
+    onFrame._q = type === 0x1D; // n'enregistre pas chaque trame 1D, sinon le journal déborde
+    switch (type) {
+      case 0x1D: parse1D(v); break;
+      case 0x2D: parse2D(v); break;
+      case 0x3D: parse3D(v); break;
+      case 0x4D: parse4D(v); break;
+      case 0x5D: parse5D(v); break;
+    }
+  } else {
+    log('rx', hex(v) + ' (inconnue)');
+  }
+  scheduleRender();
+}
+
+function parse1D(m) {
+  const L = S.live;
+  L.light = bit(m[4], 0) === 1;
+  L.mode = ['ECO', 'NORMAL', 'SPORT', 'SPORT'][(m[4] >> 1) & 3];
+  L.flag5 = bit(m[4], 5);
+  L.speed = be(m[5], m[6]) / 10;
+  L.volt = be(m[7], m[8]) / 10;
+  L.current = be(m[9], m[10]) / 10;
+  rideTick();
+}
+function parse2D(m) {
+  const L = S.live;
+  L.errors = [];
+  if (bit(m[3], 6)) L.errors.push('E-005 Défaut de tension');
+  if (bit(m[3], 5)) L.errors.push('E-002 Défaut de poignée d\'accélérateur');
+  if (bit(m[3], 3)) L.errors.push('E-006 Défaut de communication');
+  if (bit(m[3], 2)) L.errors.push('E-001 Défaut moteur');
+  if (bit(m[3], 1)) L.errors.push('E-003 Défaut contrôleur');
+  if (bit(m[3], 0)) L.errors.push('E-004 Défaut de frein');
+  L.locked = bit(m[3], 4) === 1;
+  L.trip = be(m[6], m[7]) / 10;
+  L.odo = be(m[8], m[9]);
+  L.odoHi = be(m[4], m[5]); // non utilisé par l'app officielle, gardé pour vérification
+}
+function confirm1(key, val) {
+  S.set[key] = val;
+  if (key in S.pending && S.pending[key] == val) delete S.pending[key];
+}
+function parse3D(m) {
+  confirm1('gear', m[8]);
+  confirm1('ebrake', m[9]);
+  confirm1('cruise', m[10]);
+  confirm1('start', m[11]);
+  confirm1('sleep', m[12]);
+  confirm1('p15', m[13]);
+  confirm1('backlight', m[14]);
+  confirm1('unit', m[15]);
+}
+function parse4D(m) {
+  confirm1('rated', m[4]);
+  confirm1('pwd', hex([m[5], m[6]]));
+  confirm1('wheel', be(m[7], m[8]) / 10);
+  confirm1('magnets', m[9]);
+  confirm1('zeroStart', m[15]);
+  confirm1('oneClick', m[16]);
+}
+function parse5D(m) {
+  confirm1('tail', m[3]);
+  confirm1('throttle', m[4]);
+  confirm1('p96', m[5]);
+  confirm1('icon', m[6]);
+  confirm1('startMethod', m[7]);
+  confirm1('ratio', be(m[8], m[9]) / 100);
+  confirm1('proto', m[10]);
+  confirm1('lightMode', m[11]);
+  confirm1('motor', m[15]);
+}
+
+/* Batterie : courbe Li-ion par cellule (plus juste que le calcul linéaire de l'app officielle) */
+const CURVE = [[4.20, 100], [4.10, 92], [4.00, 82], [3.90, 70], [3.80, 57], [3.70, 43], [3.60, 28], [3.50, 15], [3.40, 7], [3.30, 3], [3.10, 0]];
+let vSmooth = null;
+function battery() {
+  const V = S.live.volt; if (!V) return null;
+  const rated = RATED[S.set.rated] ?? 60;
+  const cells = CELLS[rated] || 16;
+  // compense un peu la chute de tension sous charge (≈ 0,06 Ω pour un pack 16S)
+  const comp = V + (S.live.current || 0) * 0.004 * cells;
+  vSmooth = vSmooth == null ? comp : vSmooth * 0.92 + comp * 0.08;
+  const c = vSmooth / cells;
+  if (c >= CURVE[0][0]) return { pct: 100, cells, rated };
+  for (let i = 1; i < CURVE.length; i++) {
+    if (c >= CURVE[i][0]) {
+      const [v1, p1] = CURVE[i - 1], [v0, p0] = CURVE[i];
+      return { pct: Math.round(p0 + (c - v0) / (v1 - v0) * (p1 - p0)), cells, rated };
+    }
+  }
+  return { pct: 0, cells, rated };
+}
+
+/* ---------------- Trajets ---------------- */
+function rideTick() {
+  const L = S.live, now = Date.now();
+  if (!S.ride) S.ride = { start: now, last: now, max: 0, wh: 0, dist: 0, moving: 0, startOdo: null, startTrip: null };
+  const r = S.ride, dt = (now - r.last) / 1000; r.last = now;
+  if (dt > 0 && dt < 5) {
+    r.wh += (L.volt * L.current) * dt / 3600;
+    r.dist += (L.speed || 0) * dt / 3600;
+    if (L.speed > 1) r.moving += dt;
+  }
+  r.max = Math.max(r.max, L.speed || 0);
+}
+function endRide() {
+  const r = S.ride; S.ride = null;
+  if (!r || r.dist < 0.3 || S.demo) return;
+  const list = loadHist();
+  list.unshift({ d: r.start, km: +r.dist.toFixed(2), max: +r.max.toFixed(1), wh: Math.round(r.wh), min: Math.round(r.moving / 60) });
+  try { localStorage.setItem('trott-hist', JSON.stringify(list.slice(0, 200))); } catch (e) {}
+}
+function loadHist() { try { return JSON.parse(localStorage.getItem('trott-hist')) || []; } catch (e) { return []; } }
+setInterval(() => { if (S.ride && Date.now() - S.ride.last > 120000) endRide(); }, 10000);
+window.addEventListener('pagehide', endRide);
+
+/* ---------------- Rendu ---------------- */
+let rq = false;
+function scheduleRender() { if (!rq) { rq = true; requestAnimationFrame(() => { rq = false; render(); }); } }
+
+function render() {
+  const L = S.live, St = S.set;
+  const mile = St.unit === 1;
+  $('vSpeed').textContent = Math.round(L.speed || 0);
+  $('vUnit').textContent = mile ? 'mph' : 'km/h';
+  const mode = L.mode || 'ECO';
+  $('vMode').textContent = mode; $('vMode').className = 'mode ' + mode;
+  const b = battery();
+  if (b) {
+    $('vBatt').textContent = b.pct + ' %';
+    $('vBattBar').style.width = b.pct + '%';
+    $('vBattBar').style.background = b.pct < 15 ? 'var(--bad)' : b.pct < 30 ? 'var(--warn)' : '';
+    $('vBattSub').textContent = `${L.volt.toFixed(1)} V · ${(vSmooth / b.cells).toFixed(2)} V/cellule · batterie ${b.rated} V (${b.cells}S)`;
+  }
+  $('vPower').textContent = Math.round((L.volt || 0) * (L.current || 0));
+  $('vCurrent').textContent = (L.current || 0).toFixed(1);
+  $('vVolt').textContent = (L.volt || 0).toFixed(1);
+  $('vTrip').textContent = (L.trip ?? 0).toFixed(1);
+  $('vOdo').textContent = L.odo ?? 0;
+  const r = S.ride;
+  $('vMax').textContent = r ? Math.round(r.max) : 0;
+  $('vTime').textContent = r ? fmtDur(r.moving) : '0:00';
+  $('vWh').textContent = r ? Math.round(r.wh) : 0;
+  $('vWhkm').textContent = r && r.dist > 0.2 ? Math.round(r.wh / r.dist) : '–';
+
+  $('errBox').innerHTML = (L.errors || []).map(e => `<div class="alert">⚠ ${e}</div>`).join('');
+
+  setSel($('tLight'), pv('light', L.light));
+  setSel($('tCruise'), pv('cruise', St.cruise) > 0);
+  setSel($('tLock'), L.locked); $('tLockTxt').textContent = L.locked ? 'Déverrouiller' : 'Verrouiller';
+  document.querySelectorAll('#gearBtns button').forEach(x => setSel(x, +x.dataset.g === pv('gear', St.gear)));
+  document.querySelectorAll('#motorBtns button').forEach(x => setSel(x, +x.dataset.m === pv('motor', St.motor)));
+
+  renderSettings();
+  if ($('tabDiag').classList.contains('sel')) renderDiag();
+}
+const pv = (k, v) => (k in S.pending ? S.pending[k] : v);
+function setSel(el, on) { el.classList.toggle('sel', !!on); }
+function fmtDur(s) { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60; return h ? `${h}:${String(m).padStart(2, '0')}:${String(x).padStart(2, '0')}` : `${m}:${String(x).padStart(2, '0')}`; }
+
+function renderDiag() {
+  const d = S.device;
+  $('devInfo').innerHTML = `<span>Nom</span><span>${d ? d.name : S.demo ? 'Démo' : '–'}</span><span>Écriture</span><span>${S.withResp ? 'avec réponse' : 'sans réponse'}</span><span>Octets 2D[4-5]</span><span>${S.live.odoHi ?? '–'}</span><span>Bit 1D[5]</span><span>${S.live.flag5 ?? '–'}</span>`;
+  $('lastFrames').innerHTML = ['1d', '2d', '3d', '4d', '5d'].map(k => `<span>${k.toUpperCase()}</span><span>${S.last[k] || '–'}</span>`).join('');
+  renderLog();
+}
+
+function renderHist() {
+  const list = loadHist();
+  if (!list.length) { $('histList').innerHTML = 'Aucun trajet pour l\'instant. Un trajet est enregistré à la déconnexion (ou après 2 min sans données) s\'il fait plus de 300 m.'; return; }
+  const tot = list.reduce((a, r) => (a.km += r.km, a.wh += r.wh, a), { km: 0, wh: 0 });
+  $('histList').innerHTML = `<div class="stats" style="margin-bottom:12px"><div class="stat"><b>${list.length}</b><span>Trajets</span></div><div class="stat"><b>${tot.km.toFixed(1)}</b><span>km</span></div><div class="stat"><b>${tot.km ? Math.round(tot.wh / tot.km) : '–'}</b><span>Wh/km moy.</span></div></div>` +
+    list.map(r => `<div class="row"><div class="l"><b>${new Date(r.d).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</b><small>${r.min} min · max ${r.max} km/h · ${r.wh} Wh</small></div><b>${r.km.toFixed(1)} km</b></div>`).join('');
+}
+
+/* ---------------- Réglages (générés) ----------------
+   key : champ relu dans les trames 3D/4D/5D
+   enc : valeur à envoyer (par défaut = la valeur choisie) */
+const SETTINGS = [
+  // Conduite
+  { box: 'setRide', key: 'start', cmd: 0xA7, t: 'seg', name: 'Démarrage (P20)', help: 'Nervosité au démarrage.', opts: [[0, 'Doux'], [50, 'Normal'], [100, 'Fort']], read: v => Math.round(v / 50) * 50 },
+  { box: 'setRide', key: 'ebrake', cmd: 0xA5, t: 'step', name: 'Frein moteur (P21)', help: '0 = aucun, 10 = maximum.', min: 0, max: 10 },
+  { box: 'setRide', key: 'zeroStart', cmd: 0xE1, t: 'seg', name: 'Démarrage sans pousser (P09)', help: 'Sans élan : la trott\' part à l\'arrêt.', opts: [[0, 'Sans élan'], [1, 'Avec élan']] },
+  { box: 'setRide', key: 'cruise', cmd: 0xA6, t: 'seg', name: 'Régulateur de vitesse (P16)', help: 'S\'active en gardant l\'accélérateur fixe quelques secondes.', opts: [[0, 'Off'], [10, 'On']], read: v => v > 0 ? 10 : 0 },
+  { box: 'setRide', key: 'p15', cmd: 0xA9, t: 'step', name: 'Limite de puissance / vitesse (P15)', help: '% du signal moteur. 100 = plein régime.', min: 0, max: 100, stepBy: 5, warn: true },
+  { box: 'setRide', key: 'p96', cmd: 0xE6, t: 'seg', name: 'Bridage 40 km (P96)', help: '0 : bridage non annulable · 1 : déblocable · 2 : bloqué.', opts: [[0, '0'], [1, '1'], [2, '2']], warn: true },
+  { box: 'setRide', key: 'throttle', cmd: 0xE7, t: 'seg', name: 'Poignée d\'accélérateur (P92)', help: 'Accélérateur rotatif ou gâchette.', opts: [[0, 'Gâchette'], [1, 'Rotative']] },
+  // Confort
+  { box: 'setComfort', key: 'backlight', cmd: 0xAA, t: 'step', name: 'Luminosité écran (P01)', min: 1, max: 10 },
+  { box: 'setComfort', key: 'unit', cmd: 0xAB, t: 'seg', name: 'Unité (P02)', opts: [[0, 'km'], [1, 'miles'], [2, 'les deux']] },
+  { box: 'setComfort', key: 'sleep', cmd: 0xA8, t: 'step', name: 'Mise en veille (P04)', help: 'Minutes avant extinction auto. 0 = jamais.', min: 0, max: 60 },
+  { box: 'setComfort', key: 'tail', cmd: 0xE5, t: 'seg', name: 'Feu arrière (P19)', opts: [[0, 'Toujours allumé'], [1, 'Avec le phare']] },
+  { box: 'setComfort', key: 'lightMode', cmd: 0xED, t: 'seg', name: 'Commande des feux (P91)', opts: [[0, '0'], [1, '1'], [2, '2'], [3, '3']] },
+  { box: 'setComfort', key: 'icon', cmd: 0xE8, t: 'seg', name: 'Icône moteurs à l\'écran (P97)', opts: [[0, 'Aucune'], [1, 'Bascule 1/2'], [2, '2 par défaut']] },
+  // Sécurité
+  { box: 'setSecurity', key: 'startMethod', cmd: 0xEA, t: 'seg', name: 'Allumage (P95)', help: 'Avec code : NFC ou code à l\'écran obligatoire. Note bien ton code !', opts: [[0, 'Libre'], [2, 'NFC / code']] },
+  { box: 'setSecurity', key: 'pwd', t: 'pwd', name: 'Code de l\'écran (P93)', help: '4 chiffres de 1 à 5 (boutons de l\'écran). Par défaut : 1234.' },
+  // Technique
+  { box: 'setTech', key: 'rated', cmd: 0xAE, t: 'seg', name: 'Tension batterie (P03)', help: 'Doit rester sur 60 V pour la S5-11, sinon la jauge est fausse.', opts: [[0, '24'], [1, '36'], [2, '48'], [5, '52'], [3, '60'], [4, '72']], warn: true },
+  { box: 'setTech', key: 'wheel', cmd: 0xB0, t: 'num', name: 'Diamètre de roue (P06)', help: 'En pouces. Fausse la vitesse affichée si modifié.', min: 5, max: 25.5, stepBy: 0.1, enc: v => Math.round(v * 10), warn: true },
+  { box: 'setTech', key: 'magnets', cmd: 0xB1, t: 'step', name: 'Aimants du capteur (P07)', help: 'Fausse la vitesse affichée si modifié.', min: 1, max: 100, warn: true },
+  { box: 'setTech', key: 'ratio', cmd: 0xEB, t: 'num', name: 'Rapport de vitesse (P22)', min: 0.01, max: 50, stepBy: 0.01, enc: v => Math.round(v * 100), wide: true, warn: true },
+];
+
+function buildSettings() {
+  for (const s of SETTINGS) {
+    const row = document.createElement('div'); row.className = 'row';
+    row.innerHTML = `<div class="l"><b>${s.name}</b>${s.help ? `<small>${s.help}</small>` : ''}<div class="cur" data-cur="${s.key}"></div></div>`;
+    let ctl;
+    if (s.t === 'seg') {
+      ctl = document.createElement('div'); ctl.className = 'seg';
+      for (const [v, lab] of s.opts) {
+        const b = document.createElement('button'); b.textContent = lab; b.dataset.v = v;
+        b.onclick = () => setValue(s, v); ctl.appendChild(b);
+      }
+      row.classList.add('stack');
+      row.style.flexWrap = 'wrap';
+    } else if (s.t === 'step') {
+      ctl = document.createElement('div'); ctl.className = 'step';
+      ctl.innerHTML = `<button>−</button><output>–</output><button>+</button>`;
+      const [m, , p] = ctl.children, by = s.stepBy || 1;
+      const cur = () => +pv(s.key, S.set[s.key] ?? s.min);
+      m.onclick = () => setValue(s, Math.max(s.min, cur() - by));
+      p.onclick = () => setValue(s, Math.min(s.max, cur() + by));
+    } else if (s.t === 'num') {
+      ctl = document.createElement('div'); ctl.className = 'step';
+      ctl.innerHTML = `<input type="number" step="${s.stepBy}" min="${s.min}" max="${s.max}" style="width:96px"><button style="width:auto;padding:0 12px;font-size:14px">OK</button>`;
+      ctl.children[1].onclick = () => {
+        const v = parseFloat(ctl.children[0].value);
+        if (isNaN(v) || v < s.min || v > s.max) return toast(`Valeur entre ${s.min} et ${s.max}`);
+        setValue(s, v);
+      };
+    } else if (s.t === 'pwd') {
+      ctl = document.createElement('div'); ctl.className = 'step';
+      ctl.innerHTML = `<input type="text" inputmode="numeric" maxlength="4" placeholder="1234" style="width:86px"><button style="width:auto;padding:0 12px;font-size:14px">OK</button>`;
+      ctl.children[1].onclick = async () => {
+        const v = ctl.children[0].value.trim();
+        if (!/^[1-5]{4}$/.test(v)) return toast('4 chiffres entre 1 et 5');
+        if (!await ask('Changer le code de l\'écran ?', `Nouveau code : ${v}. Si l'allumage par code est activé, tu en auras besoin pour démarrer. Note-le.`)) return;
+        S.pending.pwd = v; cmd(0xAF, parseInt(v.slice(2), 16), parseInt(v.slice(0, 2), 16)); render();
+      };
+    }
+    ctl.dataset.ctl = s.key;
+    row.appendChild(ctl);
+    if (s.t === 'seg') { ctl.style.width = '100%'; }
+    $(s.box).appendChild(row);
+  }
+}
+
+async function setValue(s, v) {
+  if (s.warn && !await ask('Réglage sensible', warnText(s))) return;
+  S.pending[s.key] = v;
+  const raw = s.enc ? s.enc(v) : v;
+  if (raw > 255 || s.key === 'ratio') cmd(s.cmd, raw & 255, (raw >> 8) & 255);
+  else cmd(s.cmd, raw);
+  render();
+  setTimeout(() => { if (S.pending[s.key] === v) { delete S.pending[s.key]; render(); } }, 8000);
+}
+function warnText(s) {
+  if (s.key === 'p15' || s.key === 'p96') return 'Ce réglage change la vitesse ou la puissance max. En France, une trottinette doit rester à 25 km/h max sur la voie publique, sinon l\'assurance peut ne plus te couvrir.';
+  return 'Ce réglage modifie l\'étalonnage de l\'écran (vitesse, kilométrage ou jauge). Une mauvaise valeur fausse les mesures. Continuer ?';
+}
+
+function renderSettings() {
+  for (const s of SETTINGS) {
+    const ctl = document.querySelector(`[data-ctl="${s.key}"]`); if (!ctl) continue;
+    const real = S.set[s.key], isPend = s.key in S.pending;
+    let v = pv(s.key, real);
+    if (s.read && v != null && !isPend) v = s.read(v);
+    const curEl = document.querySelector(`[data-cur="${s.key}"]`);
+    if (s.t === 'seg') {
+      ctl.querySelectorAll('button').forEach(b => b.classList.toggle('sel', v != null && +b.dataset.v === +v));
+      ctl.classList.toggle('pending', isPend);
+    } else if (s.t === 'step') {
+      const o = ctl.querySelector('output'); o.textContent = v ?? '–'; o.classList.toggle('pending', isPend);
+    } else if (s.t === 'num' || s.t === 'pwd') {
+      const inp = ctl.querySelector('input');
+      if (document.activeElement !== inp && s.t === 'num') inp.placeholder = real ?? '';
+      curEl.textContent = real != null ? `Actuel : ${real}` : '';
+      curEl.classList.toggle('pending', isPend);
+    }
+  }
+}
+
+/* ---------------- Dialogue ---------------- */
+function ask(title, text, typeWord) {
+  return new Promise(res => {
+    const d = $('dlg'); $('dlgT').textContent = title; $('dlgP').textContent = text;
+    $('dlgExtra').innerHTML = typeWord ? `<input type="text" id="dlgIn" placeholder="Tape ${typeWord}">` : '';
+    const done = ok => { d.close(); $('dlgYes').onclick = $('dlgNo').onclick = null; res(ok); };
+    $('dlgYes').onclick = () => {
+      if (typeWord && $('dlgIn').value.trim().toUpperCase() !== typeWord) return toast(`Tape ${typeWord} pour confirmer`);
+      done(true);
+    };
+    $('dlgNo').onclick = () => done(false);
+    d.showModal();
+  });
+}
+
+/* ---------------- Actions du tableau de bord ---------------- */
+const stopped = () => (S.live.speed || 0) < 1;
+$('tLight').onclick = () => { const on = !pv('light', S.live.light); S.pending.light = on; cmd(0xA3, on ? 1 : 0); render(); setTimeout(() => { delete S.pending.light; }, 3000); };
+$('tCruise').onclick = () => setValue(SETTINGS.find(s => s.key === 'cruise'), pv('cruise', S.set.cruise) > 0 ? 0 : 10);
+$('tLock').onclick = async () => {
+  if (S.live.locked) return cmd(0xAD, 0x00);
+  if (!stopped()) return toast('Arrête-toi avant de verrouiller');
+  if (await ask('Verrouiller la trottinette ?', 'Elle ne roulera plus jusqu\'au déverrouillage depuis l\'app.')) cmd(0xAD, 0x80);
+};
+$('tPower').onclick = async () => {
+  if (!stopped()) return toast('Arrête-toi avant d\'éteindre');
+  if (await ask('Éteindre la trottinette ?', 'L\'écran va s\'éteindre et la connexion sera coupée.')) cmd(0xA1, 0x00);
+};
+function quick(key, c, v) { S.pending[key] = v; cmd(c, v); render(); setTimeout(() => { if (S.pending[key] === v) { delete S.pending[key]; render(); } }, 8000); }
+document.querySelectorAll('#gearBtns button').forEach(b => b.onclick = () => quick('gear', 0xA4, +b.dataset.g));
+document.querySelectorAll('#motorBtns button').forEach(b => b.onclick = () => quick('motor', 0xE9, +b.dataset.m));
+
+$('bOdoReset').onclick = async () => { if (await ask('Remettre le compteur total à zéro ?', 'Le kilométrage total sera perdu définitivement.', 'ZERO')) cmd(0xE4, 0x58); };
+$('bFactory').onclick = async () => { if (await ask('Réglages d\'usine ?', 'Tous les réglages de l\'écran (P01–P99) reviennent aux valeurs d\'usine. Irréversible.', 'USINE')) cmd(0xE3, 0xA7); };
+
+$('bRaw').onclick = () => {
+  const c = parseInt($('rawCmd').value.trim(), 16), vs = $('rawVal').value.replace(/\s/g, '') || '0';
+  if (isNaN(c) || !/^[0-9a-f]{1,4}$/i.test(vs)) return toast('Format : CMD = A3, valeur = 01 ou 1234');
+  if ([0xE2, 0xEC, 0xE3, 0xE4].includes(c)) return toast('Commande bloquée ici (dangereuse ou inconnue)');
+  const n = parseInt(vs, 16); cmd(c, n & 255, (n >> 8) & 255);
+};
+$('bHandshake').onclick = handshake;
+$('bDisconnect').onclick = disconnect;
+$('bCopyLog').onclick = () => { navigator.clipboard.writeText(logLines.map(l => l.txt).join('\n') + '\n\nDernières trames:\n' + JSON.stringify(S.last, null, 1)).then(() => toast('Journal copié')); };
+$('bClearLog').onclick = () => { logLines.length = 0; renderLog(); };
+
+/* ---------------- Navigation ---------------- */
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => showTab(b.dataset.t));
+function showTab(id) {
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('sel', x.dataset.t === id));
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('sel', t.id === id));
+  if (id === 'tabHist') renderHist();
+  if (id === 'tabDiag') renderDiag();
+  window.scrollTo(0, 0);
+}
+function showApp() {
+  $('screenConnect').style.display = 'none'; $('nav').style.display = '';
+  $('demoBanner').style.display = S.demo ? '' : 'none';
+  setConn(S.demo ? 'Démo' : 'Connectée');
+  if (!document.querySelector('.tab.sel')) showTab('tabDash');
+  render();
+}
+function setConn(txt) {
+  $('connTxt').textContent = txt;
+  $('conn').className = 'pill' + (S.demo ? ' demo' : S.connected ? ' on' : '');
+}
+
+/* ---------------- Mode démo (fausses données, clairement signalé) ---------------- */
+let demoTimer = null, demoT = 0;
+const D = { gear: 1, ebrake: 3, cruise: 0, start: 50, sleep: 10, p15: 100, backlight: 6, unit: 0, rated: 3, pwd: '1234', wheel: 11, magnets: 30, zeroStart: 0, oneClick: 0, tail: 1, throttle: 0, p96: 1, icon: 1, startMethod: 2, ratio: 1, proto: 0, lightMode: 0, motor: 2, light: 0, lock: 0 };
+function demoFrame(type, fill) { const f = new Uint8Array(18); f[0] = 0xD5; f[1] = 0x12; f[2] = type; fill(f); return f; }
+function demoTick() {
+  demoT += 0.25;
+  const sp = Math.max(0, 22 + 18 * Math.sin(demoT / 6)) * 10, cur = Math.max(0, 8 + 14 * Math.cos(demoT / 6)) * 10, v = 640 - demoT * 0.2;
+  onFrame(demoFrame(0x1D, f => { f[4] = D.light | ((D.gear & 3) << 1); f[5] = sp >> 8; f[6] = sp & 255; f[7] = v >> 8; f[8] = v & 255; f[9] = cur >> 8; f[10] = cur & 255; }));
+  if (Math.round(demoT * 4) % 4 === 0) {
+    const trip = Math.round(demoT * 0.6);
+    onFrame(demoFrame(0x2D, f => { f[3] = D.lock ? 16 : 0; f[6] = trip >> 8; f[7] = trip & 255; f[8] = 0x04; f[9] = 0xD2; }));
+    onFrame(demoFrame(0x3D, f => { f[8] = D.gear; f[9] = D.ebrake; f[10] = D.cruise; f[11] = D.start; f[12] = D.sleep; f[13] = D.p15; f[14] = D.backlight; f[15] = D.unit; }));
+    onFrame(demoFrame(0x4D, f => { f[4] = D.rated; f[5] = parseInt(D.pwd.slice(0, 2), 16); f[6] = parseInt(D.pwd.slice(2), 16); f[7] = (D.wheel * 10) >> 8; f[8] = (D.wheel * 10) & 255; f[9] = D.magnets; f[15] = D.zeroStart; }));
+    onFrame(demoFrame(0x5D, f => { const r = Math.round(D.ratio * 100); f[3] = D.tail; f[4] = D.throttle; f[5] = D.p96; f[6] = D.icon; f[7] = D.startMethod; f[8] = r >> 8; f[9] = r & 255; f[10] = D.proto; f[11] = D.lightMode; f[15] = D.motor; }));
+  }
+}
+function demoApply(b) {
+  const c = b[2], v = b[5], v16 = b[4] * 256 + b[5];
+  const map = { 0xA3: 'light', 0xA4: 'gear', 0xA5: 'ebrake', 0xA6: 'cruise', 0xA7: 'start', 0xA8: 'sleep', 0xA9: 'p15', 0xAA: 'backlight', 0xAB: 'unit', 0xAE: 'rated', 0xB1: 'magnets', 0xE1: 'zeroStart', 0xE5: 'tail', 0xE6: 'p96', 0xE7: 'throttle', 0xE8: 'icon', 0xE9: 'motor', 0xEA: 'startMethod', 0xED: 'lightMode' };
+  if (map[c]) D[map[c]] = v;
+  if (c === 0xAD) D.lock = v ? 1 : 0;
+  if (c === 0xB0) D.wheel = v / 10;
+  if (c === 0xEB) D.ratio = v16 / 100;
+  if (c === 0xAF) D.pwd = hex([b[4], b[5]]);
+}
+function startDemo() { S.demo = true; S.connected = false; showApp(); demoTimer = setInterval(demoTick, 250); log('in', 'Mode démo démarré (fausses données)'); }
+function stopDemo() { clearInterval(demoTimer); demoTimer = null; }
+
+/* ---------------- Démarrage ---------------- */
+buildSettings();
+$('btnConnect').onclick = connect;
+$('btnDemo').onclick = startDemo;
+if (!navigator.bluetooth) $('noBt').style.display = 'block';
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+// garde l'écran allumé pendant la conduite
+let wakeLock = null;
+async function keepAwake() { try { if (S.connected || S.demo) wakeLock = await navigator.wakeLock?.request('screen'); wakeLock?.addEventListener('release', () => { wakeLock = null; }); } catch (e) {} }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') keepAwake(); });
+setInterval(() => { if ((S.connected || S.demo) && !wakeLock) keepAwake(); }, 5000);
+</script>
+</body>
+</html>
